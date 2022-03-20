@@ -25,20 +25,37 @@ by Luan_233
 
 #### 栈-Stack
 
+一种线性数据结构，支持在一个容器内访问栈顶元素、插入一个新元素作为栈顶、移除栈顶等操作。
+
 + 括号匹配
 
   也就是给定一个左右括号匹配的序列，里面可能包含各种各样的括号比如小括号方括号花括号，然后递归的定义匹配合法性：
+
+  + 空序列是合法的。
+  + 若括号序列$S$是合法的，那么$(S)$、$[S]$、$\{S \}$都是合法的括号序列。
+  + 若括号序列$S_1$与$S_2$均是合法的，那么$S_1S_2$是合法的括号序列。
+
+  解法：遇到左括号就压栈，遇到右括号就检查栈顶，若栈顶括号不与之匹配或者栈空就是不合法的，否则弹掉栈顶继续操作，结束以后若栈为空就是合法的括号序列。
+
+  正确性：这个就是表达式运算排除掉运算符以及常数和代数数后的剩余部分，那么需要考虑运算的优先级，建出相应的语法树，若自右向左运算优先级递降那么直接弹栈处理即可，若遇到运算优先级变化的情况，就需要把优先级高的这一部分先处理掉，显然优先级高的部分括号嵌套层数越多，按照这个语法树深度的优先级处理即可。
 
 + 单调栈
 
   用于求解一个序列中，某一个元素向左或向右第一个大于或小于它的位置。
 
-  单调栈保证栈内元素单调递增或者递减，
+  单调栈保证栈内元素单调递增或者递减，每插入一个元素就要先检查栈顶与其相对关系，弹栈维护单调关系以后再插入元素。
 
-  ```
+  以求解第一个小于其位置的元素的左端点位置$+1$为例给出代码。注意若左边没有比它小的那么答案就是$1$。其含义为求解其作为区间最小值时左端点可以取到的最左位置。
+
+  ```c++
+  int n, s[maxn], stk[maxn], top;
+  for (int i = 1; i <= n; ++i) {
+  	while (top && (s[stk[top]] >= s[i])) --top;
+  	lsid[i] = top ? (stk[top] + 1) : 1, stk[++top] = i;
+  }
   ```
 
-  正确性证明：
+  正确性：仍然以上面的代码为例，注意到每一次弹栈都是去掉了大于等于其位置的元素，每个栈内元素加入之前也会进行弹栈，同样也是弹掉大于等于其值的元素，这个过程满足单调性，也就是说弹掉的元素以及弹掉的这个元素入栈的时候所弹掉的元素都是大于当前位置的值的，那么只有小于关系能够保留下来，原先所有的不单调的地方都不会成为答案，也就是说弹掉的部分完全不会对后方产生贡献。由栈内自底到顶的单调性，取栈顶位置就是第一个满足比较结果变号的位置。
 
   例题：
 
@@ -339,11 +356,113 @@ inline void init() { for (int i = 1; i <= n; ++i) fa[i] = i; }
 
 + 具体实现手法
 
-  每个二叉树结点记录一个随机出来的优先级，单点插入删除只需要进行左旋右旋保证堆性质。
+  每个二叉树结点记录一个随机出来的优先级，单点插入后只需要进行左旋右旋保证堆性质，删除则需要一直旋转到底并维护堆性质。
 
 + 复杂度分析
 
+  以下分析以及代码实现均以小根堆作为关键字实现。证明步骤是对《算法导论》课后题的详细解答。
+
+  首先说明，对于一个有$n$个结点的Treap，若其结点的优先级两两互异，那么这棵Treap形态唯一。显然取出其中序遍历以后，可以找出全局优先级最小的位置，作为树根，然后左右变成一个子问题继续向下修建子树。
+
+  Treap可以看做是一个随机构建出来的二叉树，那么接下来证明：对于一个随机建立的有$n$个结点的二叉树，其期望高度为$O( logn)$。
+
+  考虑设随机变量$X_i$表示结点数为$i$的树的高度，设左子结点中有$i$个点，那么容易发现$X_i=1+max\{X_i,X_{n-i-1} \}$，再设$Y_i=2^{X_i}$那么套入期望得到：
+  $$
+  E(Y_i)=2E(max\{Y_i,Y_{n-i-1} \})
+  =\frac{2}{n}\sum_{i=0}^{n-1}max\{Y_i,Y_{n-i-1} \} \\
+  =\frac{2}{n}\sum_{i=0}^{n-1}\int\int f_{Y_i}(x_1) f_{Y_{n-i-1}}(x_2) max\{x1,x2 \}dx_1dx_2 \\
+  \le \frac{2}{n}\sum_{i=0}^{n-1}\int\int f_{Y_i}(x_1) f_{Y_{n-i-1}}(x_2) (x_1+x_2)dx_1dx_2 \\
+  =\frac{2}{n}\sum_{i=0}^{n-1}(E(Y_i)+E(Y_{n-i-1}))
+  = \frac{4}{n}\sum_{i=0}^{n-1}E(Y_i)
+  $$
+  接下来说明这个递归式有一个上界满足$E(Y_n)\le \frac{1}{4} C(n+3,3)$。
+
+  第一步先验证边界条件，定义$Y_0=0\le \frac{1}{4} C(3,3) =\frac{1}{4}$且$Y_1=1=\frac{1}{4} C(4,3)$成立。
+
+  然后证明一个等式：$\sum_{i=0}^{n-1}C(i+3,3)=C(n+3,4)$：
+  $$
+  \sum_{i=0}^{n-1}C(i+3,3)=\frac{1}{6}\sum_{i=0}^{n-1}(i+3)(i+2)(i+1)=
+  \frac{1}{6}\sum_{i=0}^{n-1}i^3+6i^2+11i+6\\
+  =n+\frac{1}{6}\sum_{i=1}^{n-1}i^3+\sum_{i=1}^{n-1}i^2+\frac{11}{6}\sum_{i=1}^{n-1}i\\
+  =n+\frac{(n-1)^2n^2}{24}+\frac{(n-1)n(2n-1)}{6}+\frac{11n(n-1)}{12}\\
+  =\frac{24n+n^4-2n^3+n^2+8n^3-12n^2+4n+22n^2-22n}{24}
+  =\frac{n^4+6n^3+11n^2+6n}{24}\\
+  =\frac{(n+3)(n+2)(n+1)n}{4!}=C(n+3,4)
+  $$
+  考虑代入上面的表达式，用数学归纳法验证猜想：
+  $$
+  E(Y_n)\le \frac{4}{n}\sum_{i=0}^{n-1}E(Y_i)\le \frac{4}{n}\sum_{i=0}^{n-1}\frac{1}{4}C(i+3,3)=\frac{C(n+3,4)}{n}=\frac{(n+3)(n+2)(n+1)}{24}=\frac{C(n+3,3)}{4}
+  $$
+  再由$f(x)=2^x$的凸性，由琴生不等式的积分形式得到$2^{E(x)}\le E(2^x)$，最终代入原式得到：
+  $$
+  2^{E(X_i)}\le E(2^{X_i}) =E(Y_i) \le \frac{C(i+3,3)}{4}\\
+  E(X_n)\le  log_2(\frac{C(n+3)}{4})=O(logn)
+  $$
+  更进一步的有结论：每一次插入或者删除，即产生结构性变化的时候，其需要进行的旋转次数是单次$O(1)$的。
   
+  
+
+提供一个不在一个结点内记录多重元素的写法。
+
+```c++
+struct Treap {
+private:
+	int ls[maxn], rs[maxn], key[maxn], val[maxn], siz[maxn], cnt;
+	inline void init() { ls[0] = rs[0] = siz[0] = 0, key[0] = INF; }
+	inline void pushup(int cur) { siz[cur] = siz[ls[cur]] + siz[rs[cur]] + 1; }
+	inline int newnode(int x) {
+		int cur = ++cnt;
+		val[cur] = x, key[cur] = std::rand(), siz[cur] = 1;
+		return cur;
+	}
+	inline void rotatel(int& cur) {
+		int tmp = rs[cur];
+		rs[cur] = ls[tmp], ls[tmp] = cur, pushup(cur), pushup(tmp), cur = tmp;
+	}
+	inline void rotater(int& cur) {
+		int tmp = ls[cur];
+		ls[cur] = rs[tmp], rs[tmp] = cur, pushup(cur), pushup(tmp), cur = tmp;
+	}
+public:
+    int root;
+	void insert(int& cur, int x) {
+		if (!cur) { cur = newnode(x); return; }
+		if (x <= val[cur]) {
+			insert(ls[cur], x), pushup(cur);
+			if (key[cur] > key[ls[cur]]) rotater(cur);
+		}
+		else {
+			insert(rs[cur], x), pushup(cur);
+			if (key[cur] > key[rs[cur]]) rotatel(cur);
+		}
+	}
+	void remove(int& cur, int x) {
+		if (!cur) return;
+		if (!(ls[cur] | rs[cur])) { cur = 0; return; }
+		if (x < val[cur]) remove(ls[cur], x);
+		else if (x > val[cur]) remove(rs[cur], x);
+		else {
+			if (key[ls[cur]] < key[rs[cur]]) rotater(cur), remove(rs[cur], x);
+			else rotatel(cur), remove(ls[cur], x);
+		}
+		pushup(cur);
+	}
+	int query_val(int cur, int rank) {
+		int offset = siz[ls[cur]] + 1;
+		if (rank <= siz[ls[cur]]) return query_val(ls[cur], rank);
+		else if (rank > offset) return query_val(rs[cur], rank - offset);
+		else return val[cur];
+	}
+	int query_rank(int cur, int x) {
+		if (!cur) return 1;
+		int offset = siz[ls[cur]] + 1;
+		if (x <= val[cur]) return query_rank(ls[cur], x);
+		else return query_rank(rs[cur], x) + offset;
+	}
+	inline int lower_bound(int x) { return query_val(root, query_rank(root, x) - 1); }
+	inline int upper_bound(int x) { return query_val(root, query_rank(root, x + 1)); }
+};
+```
 
 ----
 
@@ -364,14 +483,13 @@ inline void init() { for (int i = 1; i <= n; ++i) fa[i] = i; }
   \phi(T)=c\sum_{cur \in T} |size(cur.ls)-size(cur.rs)|
   $$
 
-  其中$c$是一个与$\alpha$有关的常数，容易证明一棵替罪羊树的高度一定是对数级别的，考虑一次插入一个点会最多给势能提升多少，显然是$c$倍的树的高度，是$O(logn)$的。一棵子树重构以后这个结点以及它所有的子结点的势能函数变成$0$，此时容易发现对于一个被重构的结点，我们用$O(n)$的代价让势能函数减少了$(2\alpha-1)cn$，此时只需要调结$c$的大小，使得其能够支配住重构过程的常数即可。容易发现每次不用连续重构自上而下的一段结点，只需要重构最上方的不平衡结点即可，此时重构常数极大减小。
+  其中$c$是一个与$\alpha$有关的常数，容易证明一棵替罪羊树的高度一定是对数级别的，考虑一次插入一个点会最多给势能提升多少，显然是$c$倍的树的高度，是$O(logn)$的。一棵子树重构以后这个结点以及它所有的子结点的势能函数变成$0$，此时容易发现对于一个被重构的结点，我们用$O(n)$的代价让势能函数至少减少了$(2\alpha-1)cn$，此时只需要调结$c$的大小，使得其能够支配住重构过程的常数即可。容易发现每次不用连续重构自上而下的一段结点，只需要重构最上方的不平衡结点即可，此时重构常数极大减小。
 
 提供一个常数一般的写法。其中$pushup$维护子树里面结点数以及有效结点数，有效结点数指的是结点上面元素出现次数的总和。
 
 ```c++
 struct scapeGoat_Tree {
 private:
-	#define N 100005
 	#define alpha 0.75
 	int ls[N], rs[N], root;
 	int v[N], siz[N], valid[N], num[N], cnt;
@@ -404,8 +522,7 @@ private:
 	inline bool balance(int cur) {
 		return (double)std::max(siz[ls[cur]], siz[rs[cur]]) < alpha * (double)siz[cur];
 	}
-public:
-	void insert(int& cur, int val) {
+    void insert(int& cur, int val) {
 		if (!cur) { cur = newnode(val); return; }
 		++valid[cur]; ++siz[cur];
 		if (v[cur] == val) { ++num[cur]; return; }
@@ -418,11 +535,7 @@ public:
 			if (balance(cur) && (!balance(rs[cur]))) rebuild(rs[cur]);
 		}
 	}
-	inline void Insert(int val) {
-		insert(root, val);
-		if (!balance(root)) rebuild(root);
-	}
-	void remove(int cur, int val) {
+    void remove(int cur, int val) {
 		--valid[cur]; --siz[cur];
 		if (v[cur] == val) { --num[cur]; return; }
 		if (val < v[cur]) {
@@ -433,6 +546,11 @@ public:
 			remove(rs[cur], val);
 			if (balance(cur) && (!balance(rs[cur]))) rebuild(rs[cur]);
 		}
+	}
+public:
+	inline void Insert(int val) {
+		insert(root, val);
+		if (!balance(root)) rebuild(root);
 	}
 	inline void Remove(int val) {
 		remove(root, val);
@@ -788,12 +906,30 @@ public:
 
       综合考察区间赋值，区间异或1，区间求和，区间最长1段长度。需要记录信息为区间0/1数量，区间前后缀0/1长度，最长0/1长度；标记记录区间覆盖、区间是否被异或过1。打标记以及信息下推的时候需要考虑所有可能。
 
+      ```c++
+      struct Node {
+      	int l0, r0, l1, r1, max0, max1, sum, len;
+      	Node() { l0 = 0; r0 = 0; l1 = 0; r1 = 0; max0 = 0; max1 = 0; sum = 0; }
+      } node[maxn];
+      inline Node pushup(const Node& x, const Node& y) {
+      	Node res;
+      	res.len = x.len + y.len;
+      	res.l0 = (!x.sum) ? (x.len + y.l0) : x.l0;
+      	res.r0 = (!y.sum) ? (y.len + x.r0) : y.r0;
+      	res.l1 = (x.sum == x.len) ? (x.len + y.l1) : x.l1;
+      	res.r1 = (y.sum == y.len) ? (y.len + x.r1) : y.r1;
+      	res.max0 = std::max(x.r0 + y.l0, std::max(x.max0, y.max0));
+      	res.max1 = std::max(x.r1 + y.l1, std::max(x.max1, y.max1));
+      	res.sum = x.sum + y.sum;
+      	return res;
+      }
+    
     + 例题3：洛谷P3968 [TJOI2014] 电源插排
-
+    
       在这个基础上套上动态开点即可。动态开点手法见下。需要额外注意新结点的信息以及哨兵结点信息的维护。
-
+    
     + 例题4：洛谷P4344 [SHOI2015] 脑洞治疗仪
-
+    
       在前面基本的01序列操作的前提下加上一个二分区间长度区间求和，然后区间覆盖即可。
 
 + 线段树区间操作的复杂度证明：
@@ -1156,7 +1292,7 @@ public:
 
     核心思想就是不好进行删边操作，那么就把所有的操作变成在某个时间点加入一些边。具体而言，把一条边的出现与删除转换成时间轴区间上的插入，然后把其分散到$O(logn)$个线段树结点上，然后自上而下dfs整棵线段树，每遇到一个结点就把所有保存在这个结点上面的出现的边用并查集合并维护连通性，再向下递归，若到达叶子结点就回答对应时间点的询问，返回时需要撤销并查集操作，那么并查集按秩合并开栈记录即可。
 
-    + 例题1：洛谷P2147 [SDOI2008] 洞穴勘测
+    + 例题1：洛谷P2147 [SDOI2008]洞穴勘测
     + 例题2：洛谷P5214 [SHOI2014]神奇化合物
     + 例题3：洛谷P4121 [WC2005]双面棋盘
 
@@ -1190,7 +1326,7 @@ public:
 
   + 例题1：洛谷P1848 [USACO12OPEN] Bookshelf G
   + 例题2：CF833B The Bakery
-  + 洛谷P3928 SAC E#1 - 一道简单题 Sequence2
+  + 例题3：洛谷P3928 SAC E#1 - 一道简单题 Sequence2
 
 + zkw线段树
 
@@ -1200,7 +1336,7 @@ public:
 
 + 基本操作
 
-  以hwzer的数列分块入门九题作为基础操作讲解。以下默认当询问左右端点在同一个块内的时候就是零散块的操作，设$B$为块长。
+  以hzwer的数列分块入门九题作为基础操作讲解。以下默认当询问左右端点在同一个块内的时候就是零散块的操作，设$B$为块长。
 
   + 数列分块1：区间加法，单点查询
 
@@ -2325,7 +2461,7 @@ struct aho_corasick_automaton {
 
   容易发现增删字符的过程可以等价转化为Trie树上面向上走或向下走操作，以此可以建出其对应的Trie树结构，然后考虑如何求解字符串A在B内出现的次数，由于问题的本质是匹配，故考虑先建出Trie树的AC自动机，考虑枚举B的每一个子串后缀，若B的某一个前缀子串以A为后缀，那么在对应AC自动机上不断跳$fail$，一定可以在若干次后跳到串A对应的结点。
 
-  考虑固定一个A，枚举B的每一个后缀，按照例题3的做法建出$fail$对应的树形结构，本质就是求解A对应结点的子树内有多少B的前缀对应的结点，那么DFS整棵字典树，DFS的同时维护当前路径上的字符串的所有前缀，入栈的时候在子树内对应位置赋$1$，查询就只需要子树求和，使用DFS序加上一个支持单点修改区间求和的数据结构实现即可。
+  考虑固定一个A，枚举B的每一个后缀，按照例题3的做法建出$fail$对应的树形结构，本质就是求解A对应结点的子树内有多少B的后缀对应的结点，那么DFS整棵字典树，DFS的同时维护当前路径上的字符串的所有前缀，入栈的时候在子树内对应位置赋$1$，查询就只需要子树求和，使用DFS序加上一个支持单点修改区间求和的数据结构实现即可。
 
 ----
 
