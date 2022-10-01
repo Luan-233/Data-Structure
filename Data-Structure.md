@@ -1375,22 +1375,24 @@ AVL树满足对于树上的任意一个结点，其左右子树的高度差值�
 
     容易发现$sin(a+x)=sina\ cosx+sinx\ cosa$，$cos(a+x)=cosa\ cosx-sina\ sinx$，那么维护区间$sin$和与区间$cos$和就可以同步维护。
   + 例题3：洛谷P2221 [HAOI2012]高速公路
+
+    考虑每一条边的贡献，可得答案为$\sum_{i=L}^{R-1}(i-L+1)(R-i)v_i$，拆开得到$\sum_{i=L}^{R-1}(R-LR)v_i+\sum_{i=L}^{R-1}(R+L-1)iv_i-\sum_{i=L}^{R-1}i^2v_i$，于是维护零次项、一次项与二次项的变化即可。具体的，区间加的时候，除开裸的区间加法以外，还需要计算$\sum_{i=L}^Ri$、$\sum_{i=L}^Ri^2$，有公式$\sum_{i=1}^{n}i=\frac{n(n+1)}{2}$，$\sum_{i=1}^{n}i^2=\frac{n(n+1)(2n+1)}{6}$，前缀和相减即可得到区间和。
   + 例题4：洛谷P3707 [SDOI2017]相关分析
 
     首先是考虑相关系数的求解，可以得到$b=\frac{\sum xy-n\bar{x}\bar{y}}{\sum x^2-n\bar{x}^2}$，那么在此基础上维护每个区间的$\sum xy$、$\sum x^2$、$\sum x$、$\sum y$四个信息。容易发现可以维护是否赋值的标记，赋值过后再进行加法可以等价转化为赋值标记，下推时优先考虑是否存在赋值标记。分别考虑两种操作对区间的影响：（以下设$LR$为闭区间左右端点）
-    
+
     + 区间加法：
-    
+
       + $\sum (x+S)(y+T)=\sum xy +S\sum y+T\sum x+(R-L+1)ST$
       + $\sum (x+S)^2=\sum x^2 +2S\sum x+(R-L+1)S^2$
       + $\sum x$与$\sum y$容易维护。
-    
+
     + 区间赋值：
-    
+
       + $\sum xy =\sum_{i=L}^{R} (i+S)(i+T)=\sum_{i=L}^{R}i^2+(S+T)\sum_{i=L}^{R}i+(R-L+1)ST$
       + $\sum x^2=\sum_{i=L}^{R}(i+S)^2=\sum_{i=L}^{R}i^2+2S\sum i+(R-L+1)S^2$
       + $\sum x=\sum_{i=L}^{R}(i+S)=\sum_{i=L}^{R}i+(R-L+1)S$，同理$\sum y$的维护。
-    
+
       容易发现区间赋值需要维护$\sum i$与$\sum i^2$，显然有公式$\sum_{i=1}^{n}i=\frac{n(n+1)}{2}$，$\sum_{i=1}^{n}i^2=\frac{n(n+1)(2n+1)}{6}$，套用即可。
 
 + 动态开点
@@ -3128,19 +3130,57 @@ struct aho_corasick_automaton {
 
 后缀数组求解出来以后可以快速得出一个字符串的任意两个后缀的LCP。首先介绍$height$，$height(i)$表示排名为$i$的后缀与排名为$i-1$的后缀的LCP。求解出这个以后可以用于快速求解任意两个后缀的LCP。
 
-首先证明有关于$height$的若干性质。
+首先证明有关于$height$的若干性质。为了方便描述，以下将$Sa(i)$表示为排名为$i$的后缀。
 
-+ Conclusion1：对于任意$1\le i < j \le n$，那么排名为$i$的后缀与排名为$j$后缀的LCP长度为$min\{ height(k)\}$，$i<k \le j$。
++ Conclusion1：对于任意$1\le i < j \le n$，那么$LCP(sa(i),sa(j))$就等于长度$min_{i<k \le j}\{ height(k)\}$。
 
-  这个结论是以下所有性质和优化求解的开端。
+  这个结论是以下所有性质和优化求解的开端。可以把任意两个后缀的最长公共前缀问题转化为区间最小值的求解。
 
-  网上的几乎所有证明都是从LCP Lemma开始的，即
+  网上的几乎所有证明都是从LCP Lemma开始的，即$LCP(Sa(i),Sa(j))=min_{i<k\le j}\{LCP(Sa(i),Sa(k)),LCP(Sa(k),Sa(j))\}$，笔者这里换一种介绍思路，考虑如何把$Sa(i)$修改成$Sa(i+1)$，那么一定是$Sa(i)$其中一个字符发生了变动，这个位置的字符增大后，后面的所有字符被替换成$Sa(i+1)$的后缀。这个过程可以使用归纳法递推证明：
+
+  首先来讲$LCP(Sa(i),Sa(i+1))=height(i+1)$成立，作为归纳起点。
+
+  然后假设$LCP(Sa(i),Sa(j))=min_{i<k \le j}\{ height(k)\}$，由此推到$LCP(Sa(i),Sa(j+1))$，设$x=LCP(Sa(i),Sa(j))$，由上面的过程知$Sa(i)$和$Sa(j)$的前$x$个字符相同，然后$x+1$个字符满足$Sa(i)_{x+1}<Sa(j)_{x+1}$，考虑$y=LCP(Sa(j),Sa(j+1))=height(j+1)$，讨论以下几种情况：
+
+  + 若$y\ge x$，说明$Sa(i)$与修改成的$Sa(j+1)$的前$x$个字符仍然一样，且$Sa(i)_{x+1}<Sa(j+1)_{x+1}$成立（当$x=y$的时候会把第$x+1$个字符变得更大），$LCP(Sa(i),Sa(j+1))=LCP(Sa(i),Sa(j))$。
+  + 若$y<x$，说明在第$x+1$个字符之前就已经出现一个位置$y$，使得$Sa(i)$与$Sa(j+1)$的前$y$个字符一样，且$Sa(i)_{y+1}<Sa(j+1)_{y+1}$成立，$LCP(Sa(i),Sa(j+1))=LCP(Sa(j),Sa(j+1))$。
+
+  综上知道$LCP(Sa(i),Sa(j+1))=min\{LCP(Sa(i),Sa(j)),height(j+1)\}$，递归写开，也就是$LCP(Sa(i),Sa(j))=min_{i<k \le j}\{ height(k)\}$成立。
 
 + Conclusion2：$height(rank(i))\ge height(rank(i-1))-1$
 
-  考虑
+  考虑枚举一个后缀$Sa(i)$，然后求解$LCP(Sa(i-1),Sa(i))=height(i)$：
 
-  那么利用这个性质可以快速的求解$height$数组。
+  + 若$height(i)>0$，考虑把这两个后缀同时拿掉第一个字符，得到后缀$Sa(rank(sa(i-1)+1))$与后缀$Sa(rank(sa(i)+1))$。容易发现在$height(i)>0$的前提下，两个后缀仍然满足原有的比较大小关系，由于拿掉了第一个字符，由Conclusion1知$LCP(Sa(rank(sa(i-1)+1)),Sa(rank(sa(i)+1)))=height(i)-1$，由于LCP是取区间最小值，那么$height(rank(sa(i)+1))\ge height(i)-1$。
+  + 若$height(i)=0$，那么下一步后显然有任意$height(i)\ge -1$成立。
+
+  使用$sa(rank(i))=i$与$rank(sa(i))=i$换元即可得到结论。
+
+  那么利用这个性质可以快速的求解$height$数组。只需要枚举原串从前向后的后缀，暴力的扩展即可。由摊还分析知总复杂度是$O(n)$的。复杂度证明略去。
+
+  ```c++
+  inline void calc_height() {
+  	for (int i = 1, x = 0; i <= n; ++i) {
+  		x -= x ? 1 : 0;
+  		int j = sa[rank[i] - 1];
+  		while (s[j + x] == s[i + x]) ++x;
+  		height[rank[i]] = x;
+  	}
+  }
+
+例题：
+
++ 例题1：洛谷P4051 [JSOI2007]字符加密
+
+  显然把原串倍长一下放到后面，其所有长度为$n$的子串包含了所有轮换，对这个倍长后的串做后缀排序，枚举长度大于等于$n$的后缀即可。
+
++ 例题2：洛谷P2408 不同子串个数
+
+  考虑按照后缀的排名枚举每一个后缀，每个后缀的所有前缀就是原串的子串集合。考虑一个新的后缀能够产生多少新的本质不同的前缀，那么会发现对于后缀$Sa(i)$，其能增加的量就是$|Sa(i)|-height(i)$，那么总答案就是$\frac{|S|(|S|+1)}{2}-\sum_{i=2}^{|S|}height(i)$。
+
++ 例题3：洛谷P4248 [AHOI2013]差异
+
++ 例题4：洛谷P2178 [NOI2015] 品酒大会
 
 ----
 
