@@ -16,7 +16,21 @@ by Luan_233
 
 + 单链表
 
-  需要维护初始位置也即链表头，以及每个结点的下个位置，一般记为$next$指针。插入删除元素需要提前预知所在结点的前一个位置，然后改动$next$指针解决。
+  其逻辑结构如下，由头指针以及每个结点的后继组成：
+
+  ![](./assests/Liner_DataStructere/List/Single_List_Sample.png)
+
+  代码实现则需要维护初始位置也即链表头，以及每个结点的下个位置，记为$next$指针。插入删除元素需要提前预知所在结点的前一个位置，然后改动$next$指针解决。
+
+  具体而言，插入一个结点需要首先赋值新结点的$next$指针，然后修改前驱的$next$：
+
+  ![](./assests/Liner_DataStructere/List/Single_List_Insert.png)
+
+  删除结点则直接把前驱的$next$指向其后继即可：
+
+  ![](./assests/Liner_DataStructere/List/Single_List_Delete.png)
+
+  一个简单的代码实现为：
 
   ```c++
   int head, nxt[maxn], ptr;
@@ -42,7 +56,9 @@ by Luan_233
 
     用于存储图。一般来讲邻接表适用于存储稀疏图如树。图上每个点对应一个链表，存储其所有的出边。
 
-    下面给出一个存储无向图的邻接表。
+    ![](./assests/Liner_DataStructere/List/Single_List_Adjacency_List.png)
+
+    下面给出一个存储无向图的邻接表的代码实现。
 
     ```c++
     int head[maxn], nxt[maxm], to[maxm], cnt;
@@ -54,7 +70,7 @@ by Luan_233
 
   + 哈希表
 
-    本质就是一个散列表实现的集合容器，可以用来存储映射或者是单纯的存储元素。
+    本质就是一个散列表实现的集合容器，可以用来存储映射或者是单纯的存储元素。其结构与邻接表相同。
 
     一般来讲键值都是非负整数，考虑如何压缩数据至一起，那么考虑模一个数，得到一个剩余系，但是显然不同的原数会在模剩余系下有冲突，所以每个模剩余系下的数都会对应一个链表，串起所有模剩余系下相同的数。
 
@@ -100,7 +116,19 @@ by Luan_233
 
   实现了单链表无法快速查询前驱元素的问题。也就是说每个结点有两个指针，指向前一个结点与后一个结点。
 
+  ![](./assests/Liner_DataStructere/List/Two_Way_List_Sample.png)
+
   插入删除与单链表的原理相同，只不过需要额外维护指向前一个位置的指针。
+
+  插入的时候，首先赋值新结点的前驱后继，然后再修改前后结点的信息。
+
+  ![](./assests/Liner_DataStructere/List/Two_Way_List_Insert.png)
+
+  删除也同理。一样的，若不进行回收，则这个被删除的结点永远不会被访问到。
+
+  ![](./assests/Liner_DataStructere/List/Two_Way_List_Delete.png)
+
+  下面给出代码实现。
 
   ```c++
   int head, nxt[maxn], pre[maxn], ptr;
@@ -129,11 +157,17 @@ by Luan_233
 
 + 循环链表
 
-  就是把链表头尾套接到一起。一般用于处理有环的问题。
+  就是把双向链表头尾套接到一起。一般用于处理有环的问题。这里不做赘述。
+
+  ![](./assests/Liner_DataStructere/List/Circulate_List_Sample.png)
 
 + 十字链表
 
   需要维护上下左右四个指针，用于DLX算法精确覆盖的快速实现。这里不做赘述。
+
+  ![](./assests/Liner_DataStructere/List/Cross_List_Sample.png)
+
+  （注意这个是个不严格的画法，第一没有上和左的指针，第二，任何一行结尾的指针应当指回行首，列尾指针应当指回列首，这样才能便于DLX的实现。）
 
 ----
 
@@ -2867,13 +2901,55 @@ AVL树满足对于树上的任意一个结点，其左右子树的高度差值�
   
 + 长链剖分
 
-  用于DP优化、K级祖先查找优化。
+  用于DP优化、$K$级祖先查找优化。
 
   类似于重链剖分，惟一的区别是重儿子指向的是向下能够走出路径最长的一个子节点，类似的可以分析出每个结点到根结点的轻重链切换次数都是$O(\sqrt{n})$的。
 
   
   
+  下面给出一些长链剖分的应用。
+  
   + 强制在线求K级祖先
+  
+    首先证明一个简单的结论：对于一个点，其$K$级祖先所在的链长度一定大于等于$K$。显然$K$级祖先向下能走的最大长度大于等于$K$，其长链长度一定大于等于$K$。
+  
+    在上面这个结论为前提的情况下，一个巧妙的思路是：要求$cur$的$K$级祖先，可以先求$cur$的$2^{\lfloor log_2K \rfloor}$级祖先，那么显然有$K-2^{\lfloor log_2K \rfloor}< 2^{\lfloor log_2K \rfloor}$，说明剩余的步长小于这一跳（$2^{\lfloor log_2K \rfloor}$级祖先）的步长，由上述结论知，下一步要在一个链内求一个点的不超过所在链长级的祖先，可以用额外的一倍信息进行维护。
+  
+    那么长链剖分出来所有的链，按照顺序记录从链顶到链尾的所有点，设链长为$L$，还需要额外处理出从链顶向上$L$步的链信息，用数组记录即可。查询的时候首先跳$2^{\lfloor log_2K \rfloor}$到$x'$，然后依据剩余步数和$x'$到$x'$所在链的链顶的距离大小关系，查询链顶向下或者向上的信息。
+  
+    下面给出一个求$K$级祖先的代码，其第一遍DFS求解深度、最大链深度、长儿子，第二遍DFS求解每个点所在链的链顶，以及从链顶预处理出向上和向下链长步的信息。其中$seq1$记录的是向下的链，$seq2$记录向上的链。
+  
+    ```c++
+    int rt, fa[maxn], top[maxn], deep[maxn], len[maxn], son[maxn];
+    void dfs1(int pos) {
+        len[pos] = 1;
+        for (int i = head[pos]; i; i = nxt[i]) {
+            deep[to[i]] = deep[pos] + 1, dfs1(to[i]);
+            if (len[to[i]] > len[son[pos]]) son[pos] = to[i];
+        }
+        if (son[pos]) len[pos] = len[son[pos]] + 1;
+    }
+    int seq1[maxn], seq2[maxn], * ptr1[maxn], * ptr2[maxn], tot;
+    void dfs2(int pos) {
+        if (!top[pos]) {
+            top[pos] = pos;
+            ptr1[pos] = &(seq1[tot]), ptr2[pos] = &(seq2[tot]);
+            tot += len[pos];
+            int tmp = pos;
+            for (int i = 0; i < len[pos]; ++i) ptr2[pos][i] = tmp, tmp = fa[tmp];
+        }
+        ptr1[top[pos]][deep[pos] - deep[top[pos]]] = pos;
+        if (son[pos]) top[son[pos]] = top[pos], dfs2(son[pos]);
+        for (int i = head[pos]; i; i = nxt[i]) if (to[i] != son[pos]) dfs2(to[i]);
+    }
+    int f[maxn][22], lg2[maxn];
+    inline int query(int x, int k) {
+        if (!k) return x;
+        x = f[x][lg2[k]], k -= (1 << lg2[k]);
+        int tp = top[x], dis = deep[x] - deep[tp];
+        return (dis >= k) ? ptr1[tp][dis - k] : ptr2[tp][k - dis];
+    }
+    ```
   + 树形DP优化
   
 + 基于DFS序的换根操作
@@ -2894,12 +2970,12 @@ AVL树满足对于树上的任意一个结点，其左右子树的高度差值�
     
   + 例题3：洛谷P3676 小清新数据结构题
   
-    考虑若询问以1为根，那么修改$x$的点权后，子树和会变化的情况只有从$x$到1的这条路径会发生变化，因为是平方之和，因此树剖内套一个线段树，线段树维护每个点子树和的平方，那么线段树只需要维护区间和以及区间平方和就可以维护了。
+    考虑若询问以$1$为根，那么修改$x$的点权后，子树和会变化的情况只有从$x$到$1$的这条路径会发生变化，因为是平方之和，因此树剖内套一个线段树，线段树维护每个点子树和的平方，那么线段树只需要维护区间和以及区间平方和就可以维护了。
   
-    现在加上换根，考虑现在查询的点是$x$，那么会发现在以1为根的答案的基础上，子树平方和会发生变化的只有从$x$到1的路径上的点，考虑其变化：
+    现在加上换根，考虑现在查询的点是$x$，那么会发现在以$1$为根的答案的基础上，每一次向下移动一步计算答案的变化量，也就是子树平方和会发生变化的只有从$x$到$1$的路径上的点，考虑其变化：
   
     + 对于点$x$，显然变化为全局和的平方。也就是原先1号点的子树和平方。
-    + 对于从$fa(x)$到1路径上的点$y$，其权值从$sum(y)^2$变化为$(sum(1)-sum(z))^2$，其中$z$满足$fa(z)=y$且$LCA(x,z)=z$。那么考虑每一个路径上的点在和式中的出现次数，写出变化量和式即为$\sum (sum(1)-sum(z))^2-sum(y)^2=(deep(x)-deep(1)-1)sum(x)^2-2sum(1)\sum sum(cur)$。其中$\sum sum(cur)$表示从$x$到1且不包含1的路径上的点的子树和的和。
+    + 对于从$fa(x)$到$1$路径上的点$y$，其权值从$sum(y)^2$变化为$(sum(1)-sum(z))^2$，其中$z$满足$fa(z)=y$且$LCA(x,z)=z$。那么考虑每一个路径上的点在和式中的出现次数，写出变化量和式即为$\sum (sum(1)-sum(z))^2-sum(y)^2=(deep(x)-deep(1)-1)sum(x)^2-2sum(1)\sum sum(cur)$。其中$\sum sum(cur)$表示从$x$到1且不包含1的路径上的点的子树和的和。
   
     综上发现线段树直接维护区间和以及区间平方和即可。
 
@@ -3679,4 +3755,4 @@ $$
 
 ---
 
-### 附录3：
+### 附录3：悬线法
